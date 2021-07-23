@@ -1,7 +1,6 @@
 #include <Adafruit_FONA.h>
 #include "Adafruit_FONA.h"
 #include <SoftwareSerial.h>
-#include <iostream>
 
 // standard pins for the shield, adjust as necessary
 #define FONA_RX 2
@@ -28,7 +27,11 @@ SoftwareSerial *fonaSerial = &fonaSS;
 
 Adafruit_FONA fona = Adafruit_FONA(FONA_RST);
 
-float latitude, longitude, speed_kph, heading, altitude;
+float latitude = 0;
+float longitude = 0; 
+float speed_kph = 0;
+float heading = 0;
+float altitude = 0;
 
 char fonaNotificationBuffer[64];          //for notifications from the FONA
 char smsBuffer[64];
@@ -36,11 +39,11 @@ char* bufPtr = fonaNotificationBuffer;    //handy buffer pointer
 char callerIDbuffer[32];                  //we'll store the SMS sender number in here
 
 static const char url[] PROGMEM = "https://aepb-web-api.azurewebsites.net/api/v1/trucks/%s/locations";    // replace %s with device ID
-static const apn glo_apn[] PROGMEM = "APN";    // replace %s with device ID
-static const apn glo_password[] PROGMEM = "Flat";
-static const apn glo_username[] PROGMEM = "Flat";    
+static const char glo_apn[] PROGMEM = "APN";    // replace %s with device ID
+static const char glo_password[] PROGMEM = "Flat";
+static const char glo_username[] PROGMEM = "Flat";    
 
-//char data[40] = {};
+char data_c[50] = {};
 String data = "{\"longitude\":<lat>,\"lattitude\":<lon>}";
 
 static const char ID[16] = "ABCDEFGHIKLM";
@@ -65,16 +68,17 @@ boolean myLocation() {
 
 void send_to_prunedge_server(void) {
 
-  data = data.replace("<lat>", latitude.to_string());
-  data = data.replace("<lon>", longitude.to_string());
-  char *yam = data.c_string();
+  data = data.replace((char *)"<lat>", (char *)String(latitude, 6).c_str());
+  data = data.replace((char *)"<lon>", (char *)String(longitude, 6).c_str());
 
-  if (!fona.HTTP_POST_start(url, F("application/json"), (uint8_t *)yam, strlen(yam), &statuscode, (uint16_t *)&length))
+  data.toCharArray(data_c, (unsigned int)strlen(data_c));
+
+  if (!fona.HTTP_POST_start(url, F("application/json"), (uint8_t *)data_c, strlen(data_c), &status_code, (uint16_t *)&length))
   {
     Serial.println("Failed to make HTTP post");
   }
   else {
-    Serial.println("OK");
+    Serial.print(status_code); Serial.println(" OK");
   }
 
   fona.HTTP_POST_end();
@@ -103,8 +107,8 @@ void setup() {
   fonaSerial->print("AT+CNMI=2,1\r\n");
   digitalWrite(led, HIGH);
 
-  fona.setGPRSNetworkSettings(glo_apn, glo_username, glo_password));
-  fona.enableGPRS(true))
+  fona.setGPRSNetworkSettings(glo_apn, glo_username, glo_password);
+  fona.enableGPRS(true);
   fona.setHTTPSRedirect(true);
 
   fona.getIMEI(ID);
@@ -147,7 +151,7 @@ void loop() {
         /* Remote commands are executed here
          * See definitions above.
         */
-        if( strstr(smsBuffer, F(mystatus)) == 0 ) {
+        if( strstr(smsBuffer, mystatus) == 0 ) {
           if(myLocation()) {
             message = googlemap + String(latitude,6)+","+String(longitude,6);
             message = stat + message +"\nSpeed:"+ (String)speed_kph + "KPH";
@@ -157,15 +161,15 @@ void loop() {
             Serial.println(F("Response success"));
           }
         } 
-        else if (strstr(smsBuffer, F(kill)) == 0) {   // relay handler
+        else if (strstr(smsBuffer, kill) == 0) {   // relay handler
           stat = "RAA: killed\nLoc:";
           digitalWrite(relay, HIGH);
           Serial.println("vTrack stoped!");
-          if (!fona.sendSMS(callerIDbuffer, F("RAA:killed"))) {
+          if (!fona.sendSMS(callerIDbuffer, "RAA:killed")) {
             Serial.println(F("Realay resp: Failed"));
           }
         }
-        else if (strstr(smsBuffer, F(allow)) == 0) {
+        else if (strstr(smsBuffer, allow) == 0) {
           digitalWrite(relay, LOW);
           //control = false;
           stat = "RAA: active\nLoc:";
@@ -179,6 +183,7 @@ void loop() {
 
   if (millis() - last_upload_time > upload_timeout) {
     last_upload_time = millis();
+    myLocation();
     send_to_prunedge_server();
   }
 }
