@@ -42,7 +42,7 @@ char smsBuffer[64];
 char *bufPtr = fonaNotificationBuffer; //handy buffer pointer
 char callerIDbuffer[32];               //we'll store the SMS sender number in here
 
-String url = "https://aepb-web-api.azurewebsites.net/api/v1/trucks/<url>/locations"; // replace %s with device ID
+String url = "http://aepb-web-api.azurewebsites.net/api/v1/trucks/<url>/locations"; // replace %s with device ID
 // const char glo_apn[] = "APN";                                                           // replace %s with device ID
 // char glo_password[] = "Flat";
 // char glo_username[] = "Flat";
@@ -119,7 +119,7 @@ void setup() {
   */
   fona.setGPRSNetworkSettings(F(gloAPN), F(gloUSERNAME), F(gloPASSWORD));
   fona.enableGPRS(true);
-  // fona.setHTTPSRedirect(true);
+  fona.setHTTPSRedirect(true);
 
   char ID[16] = {0};
   if (fona.getIMEI(ID) > (uint8_t)0) {
@@ -158,11 +158,10 @@ void loop() {
       if (!fona.getSMSSender(slot, callerIDbuffer, 31)) Serial.println("SMS not in slot!");
 
       else { 
-
         Serial.print(F("SMS from: "));
         Serial.println(callerIDbuffer);
-        if (fona.readSMS(slot, smsBuffer, 64, &smslen)) {
 
+        if (fona.readSMS(slot, smsBuffer, 64, &smslen)) {
           Serial.println(smsBuffer);
 
           /* Remote commands are executed here
