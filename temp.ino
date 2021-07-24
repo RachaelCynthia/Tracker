@@ -18,6 +18,8 @@
 #define gloUSERNAME "flat"
 #define gloPASSWORD "flat"
 
+#define SMSBUFFLEN 160
+
 uint16_t fixtime = 1000;
 
 String stat = "RAA:active\nLoc:";
@@ -37,7 +39,7 @@ float heading = 0;
 float altitude = 0;
 
 char fonaNotificationBuffer[64]; //for notifications from the FONA
-char smsBuffer[250];
+char smsBuffer[SMSBUFFLEN];
 char *bufPtr = fonaNotificationBuffer; //handy buffer pointer
 
 String url = "http://aepb-web-api.azurewebsites.net/api/v1/trucks/<url>/locations"; // replace %s with device ID
@@ -45,8 +47,8 @@ String url = "http://aepb-web-api.azurewebsites.net/api/v1/trucks/<url>/location
 // char glo_password[] = "Flat";
 // char glo_username[] = "Flat";
 
-char data_c[50] = {};
-String data = "{\"longitude\":<lat>,\"lattitude\":<lon>}";
+char data_c[100] = {};
+//char * data = "{\"longitude\":%s,\"lattitude\":%s}";
 
 int status_code = 0;
 int length = 0;
@@ -65,44 +67,45 @@ boolean myLocation()
     {
         gps_success = fona.getGPS(&latitude, &longitude, &speed_kph, &heading, &altitude);
         if (gps_success) {
-            data.replace("<lat>", String(latitude, 6));
-            data.replace("<lon>", String(longitude, 6));
+            sprintf(data_c, "{\"longitude\":%s,\"latitude\":%s}", String(longitude, 6).c_str(), String(latitude, 6).c_str());
+            // data.replace("<lat>", String(latitude, 6));
+            // data.replace("<lon>", String(longitude, 6));
             return true;
         }
     }
     return gps_success;
 }
 
-void send_to_prunedge_server(void)
-{
-    fona.enableGPRS(true);
-    data.replace("<lat>", String(latitude, 6));
-    data.replace("<lon>", String(longitude, 6));
-    data.toCharArray(data_c, (unsigned int)strlen(data_c));
-    if (!fona.HTTP_POST_start(url.c_str(), F("application/json"), (uint8_t *)data_c, strlen(data_c), &status_code, (uint16_t *)&length))
-    {
-        Serial.println(F("Failed to make HTTP post"));
-    }
-    Serial.print(status_code);
-    Serial.println(F(" status code"));
-    Serial.print(length);
-    Serial.println(F(" length"));
-    data = "{\"longitude\":<lat>,\"lattitude\":<lon>}";
-    status_code = 0;
-    length = 0;
-    fona.HTTP_POST_end();
-    fona.enableGPRS(false);
-}
+// void send_to_prunedge_server(void)
+// {
+//     fona.enableGPRS(true);
+//     data.replace("<lat>", String(latitude, 6));
+//     data.replace("<lon>", String(longitude, 6));
+//     data.toCharArray(data_c, (unsigned int)strlen(data_c));
+//     if (!fona.HTTP_POST_start(url.c_str(), F("application/json"), (uint8_t *)data_c, strlen(data_c), &status_code, (uint16_t *)&length))
+//     {
+//         Serial.println(F("Failed to make HTTP post"));
+//     }
+//     Serial.print(status_code);
+//     Serial.println(F(" status code"));
+//     Serial.print(length);
+//     Serial.println(F(" length"));
+//     data = "{\"longitude\":<lat>,\"lattitude\":<lon>}";
+//     status_code = 0;
+//     length = 0;
+//     fona.HTTP_POST_end();
+//     fona.enableGPRS(false);
+// }
 
 void send_sms_to_rachael(void) {
     Serial.println(F("Sending to emergency..."));
-    if (!fona.sendSMS(Emergency, data.c_str())) {
+    if (!fona.sendSMS(Emergency, data_c)) {
         Serial.println(F("Could not send SMS to emergency number"));
     }
     else {
         Serial.println(F("SMS sent to emergency line"));
     }
-    data = "{\"longitude\":<lat>,\"lattitude\":<lon>}";
+    sprintf(data_c, "%s", "{\"longitude\":%s,\"lattitude\":%s}");
 }
 
 void setup()
@@ -127,7 +130,7 @@ void setup()
     // Try to enable GPRS
     Serial.println(F("Enabling GPS..."));
     fona.enableGPS(true);
-    fonaSerial->print("AT+CNMI=2,1\r\n");
+    fonaSerial->print(F("AT+CNMI=2,1\r\n"));
     digitalWrite(led, HIGH);
 
     /*
@@ -142,14 +145,14 @@ void setup()
     if (fona.getIMEI(ID) > (uint8_t)0)
     {
         url.replace("<url>", String(ID));
-        Serial.print("Complete URL: ");
+        Serial.print(F("Complete URL: "));
         Serial.println(url);
     }
     else
     {
-        Serial.println("Did not get SIM IMEI");
+        Serial.println(F("Did not get SIM IMEI"));
     }
-    Serial.println("FONA Ready");
+    Serial.println(F("FONA Ready"));
 }
 
 void loop()
@@ -179,7 +182,7 @@ void loop()
             char callerIDbuffer[32]; //we'll store the SMS sender number in here
             if (!fona.getSMSSender(slot, callerIDbuffer, 31))
             {
-                Serial.println("SMS not in slot!");
+                Serial.println(F("SMS not in slot!"));
             }
             else
             {
@@ -187,9 +190,9 @@ void loop()
                 Serial.println(callerIDbuffer);
             }
 
-            if (fona.readSMS(slot, smsBuffer, 250, &smslen))
+            if (fona.readSMS(slot, smsBuffer, SMSBUFFLEN, &smslen))
             {
-                Serial.print("smsBuffer: ");
+                Serial.print(F("smsBuffer: "));
                 Serial.println(smsBuffer);
 
                 if (strstr(smsBuffer, kill) != NULL) // relay handler
