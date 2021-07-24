@@ -62,19 +62,6 @@ boolean myLocation(){
     return false;
 }
 
-void blink_interrupt(void) {
-  switch (state) {
-    case 1:
-      digitalWrite(pin, HIGH);
-    case 0:
-      digitalWrite(pin, LOW);
-  }
-
-//  digitalWrite(pin, HIGH);
-//  delay(interrupt_time);
-//  digitalWrite(pin,LOW);
-//  delay(interrupt_time);
-} 
 
 void setup() {
   pinMode(relay, OUTPUT);
