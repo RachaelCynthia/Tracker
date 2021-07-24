@@ -61,7 +61,6 @@ boolean myLocation()
     while (millis() - previous < fixtime)
     {
         gps_success = fona.getGPS(&latitude, &longitude, &speed_kph, &heading, &altitude);
-        Serial.print(gps_success);
         if (gps_success)
             return true;
     }
@@ -186,31 +185,13 @@ void loop()
 
         if (fona.readSMS(slot, smsBuffer, 250, &smslen))
         {
-            Serial.println(smsBuffer);
+            Serial.print("smsBuffer: "); Serial.println(smsBuffer);
 
-            /* Remote commands are executed here
-      * See definitions above.
-      */
-            if (strstr(smsBuffer, mystatus) == 0)
+        /* Remote commands are executed here
+         * See definitions above.
+        */
+            if (strstr(smsBuffer, kill) == 0)   // relay handler
             {
-                if (myLocation())
-                {
-                    message = googlemap + String(latitude, 6) + "," + String(longitude, 6);
-                    message = stat + message + "\nSpeed:" + (String)speed_kph + "KPH";
-                    if (!fona.sendSMS(callerIDbuffer, message.c_str())) {
-                        Serial.println(F("Failed to send mystatus response"));
-                    }
-                    else
-                    {
-                        Serial.println(F("Response success"));
-                    }
-                }
-                else {
-                    Serial.println("Location unavailable");
-                }
-            }
-            else if (strstr(smsBuffer, kill) == 0)
-            { // relay handler
                 stat = "RAA: killed\nLoc:";
                 digitalWrite(relay, HIGH);
                 Serial.println("vTrack stoped!");
@@ -218,7 +199,7 @@ void loop()
                 {
                     Serial.println(F("Realay resp: Failed"));
                 }
-            }
+            }       
             else if (strstr(smsBuffer, allow) == 0)
             {
                 digitalWrite(relay, LOW);
@@ -229,6 +210,26 @@ void loop()
                     Serial.print(F("Failed"));
                 }
             }
+            else if (strstr(smsBuffer, mystatus) == 0)
+            {
+                if (myLocation())
+                {
+                    message = googlemap + String(latitude, 6) + "," + String(longitude, 6);
+                    message = stat + message + "\nSpeed:" + (String)speed_kph + "KPH";
+                    if (!fona.sendSMS(callerIDbuffer, message.c_str()))
+                    {
+                        Serial.println(F("Failed to send mystatus response"));
+                    }
+                    else
+                    {
+                        Serial.println(F("Response success"));
+                    }
+                }
+                else
+                {
+                    Serial.println("Location unavailable");
+                }
+            }
             else
             {
                 if (!fona.sendSMS(callerIDbuffer, "Command not recognised"))
@@ -236,10 +237,10 @@ void loop()
             }
         }
     
-        for (int i = 0; i < sizeof(smsBuffer)/sizeof(smsBuffer[0]); i++) {
+        for (int i = 0; i < strlen(smsBuffer); i++) {
             smsBuffer[i] = 0;
         }
-        
+
         if (!fona.deleteSMS(slot)) {
             Serial.println(F("OK!"));
             fona.print(F("AT+CMGD=?\r\n"));
