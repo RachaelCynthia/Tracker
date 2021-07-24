@@ -76,26 +76,28 @@ boolean myLocation()
     return gps_success;
 }
 
-// void send_to_prunedge_server(void)
-// {
-//     fona.enableGPRS(true);
-//     data.replace("<lat>", String(latitude, 6));
-//     data.replace("<lon>", String(longitude, 6));
-//     data.toCharArray(data_c, (unsigned int)strlen(data_c));
-//     if (!fona.HTTP_POST_start(url.c_str(), F("application/json"), (uint8_t *)data_c, strlen(data_c), &status_code, (uint16_t *)&length))
-//     {
-//         Serial.println(F("Failed to make HTTP post"));
-//     }
-//     Serial.print(status_code);
-//     Serial.println(F(" status code"));
-//     Serial.print(length);
-//     Serial.println(F(" length"));
-//     data = "{\"longitude\":<lat>,\"lattitude\":<lon>}";
-//     status_code = 0;
-//     length = 0;
-//     fona.HTTP_POST_end();
-//     fona.enableGPRS(false);
-// }
+void send_to_prunedge_server(void)
+{
+    fona.enableGPRS(true);
+    // data.replace("<lat>", String(latitude, 6));
+    // data.replace("<lon>", String(longitude, 6));
+    // data.toCharArray(data_c, (unsigned int)strlen(data_c));
+    sprintf(data_c, "{\"longitude\":%s,\"latitude\":%s}", String(longitude, 6).c_str(), String(latitude, 6).c_str());
+
+    if (!fona.HTTP_POST_start(url.c_str(), F("application/json"), (uint8_t *)data_c, strlen(data_c), &status_code, (uint16_t *)&length))
+    {
+        Serial.println(F("Failed to make HTTP post"));
+    }
+    Serial.print(status_code);
+    Serial.println(F(" status code"));
+    Serial.print(length);
+    Serial.println(F(" length"));
+    sprintf(data_c, "%s", "{\"longitude\":%s,\"lattitude\":%s}");
+    status_code = 0;
+    length = 0;
+    fona.HTTP_POST_end();
+    fona.enableGPRS(false);
+}
 
 void send_sms_to_rachael(void) {
     Serial.println(F("Sending to emergency..."));
@@ -137,9 +139,9 @@ void setup()
    * <username> and <password> is the same for Glo network
    * fona.setGPRSNetworkSettings(glo_apn, <username>, <password?);
   */
-    // fona.setGPRSNetworkSettings(F(gloAPN), F(gloUSERNAME), F(gloPASSWORD));
-    // fona.enableGPRS(true);
-    // fona.setHTTPSRedirect(true);
+    fona.setGPRSNetworkSettings(F(gloAPN), F(gloUSERNAME), F(gloPASSWORD));
+    fona.enableGPRS(true);
+    fona.setHTTPSRedirect(true);
 
     char ID[16] = {0};
     if (fona.getIMEI(ID) > (uint8_t)0)
