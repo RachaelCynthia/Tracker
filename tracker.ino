@@ -119,7 +119,7 @@ void setup() {
   */
   fona.setGPRSNetworkSettings(F(gloAPN), F(gloUSERNAME), F(gloPASSWORD));
   fona.enableGPRS(true);
-  fona.setHTTPSRedirect(true);
+  // fona.setHTTPSRedirect(true);
 
   char ID[16] = {0};
   if (fona.getIMEI(ID) > (uint8_t)0) {
@@ -193,6 +193,9 @@ void loop() {
             if (!fona.sendSMS(callerIDbuffer, "RAA:Active")) {
               Serial.print(F("Failed"));
             }
+          }
+          else {
+            if (!fona.sendSMS(callerIDbuffer, "Command not recognised")) Serial.println("Replying to unknown command: Failed");
           }
         }
       }
