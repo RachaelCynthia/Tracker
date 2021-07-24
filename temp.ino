@@ -18,7 +18,7 @@
 #define gloUSERNAME "flat"
 #define gloPASSWORD "flat"
 
-uint16_t fixtime = 10000;
+uint16_t fixtime = 1000;
 
 String message = "";
 String stat = "RAA:active\nLoc:";
@@ -38,7 +38,7 @@ float heading = 0;
 float altitude = 0;
 
 char fonaNotificationBuffer[64]; //for notifications from the FONA
-char smsBuffer[64];
+char smsBuffer[250];
 char *bufPtr = fonaNotificationBuffer; //handy buffer pointer
 
 String url = "http://aepb-web-api.azurewebsites.net/api/v1/trucks/<url>/locations"; // replace %s with device ID
@@ -184,7 +184,7 @@ void loop()
             Serial.println(callerIDbuffer);
         }
 
-        if (fona.readSMS(slot, smsBuffer, 64, &smslen))
+        if (fona.readSMS(slot, smsBuffer, 250, &smslen))
         {
             Serial.println(smsBuffer);
 
@@ -197,12 +197,16 @@ void loop()
                 {
                     message = googlemap + String(latitude, 6) + "," + String(longitude, 6);
                     message = stat + message + "\nSpeed:" + (String)speed_kph + "KPH";
-                    if (!fona.sendSMS(callerIDbuffer, message.c_str()))
+                    if (!fona.sendSMS(callerIDbuffer, message.c_str())) {
                         Serial.println(F("Failed to send mystatus response"));
+                    }
+                    else
+                    {
+                        Serial.println(F("Response success"));
+                    }
                 }
-                else
-                {
-                    Serial.println(F("Response success"));
+                else {
+                    Serial.println("Location unavailable");
                 }
             }
             else if (strstr(smsBuffer, kill) == 0)
@@ -233,9 +237,13 @@ void loop()
         }
     
         if (!fona.deleteSMS(slot)) {
-            Serial.print("slot "); Serial.print(slot); Serial.println(" deleted");
             Serial.println(F("OK!"));
             fona.print(F("AT+CMGD=?\r\n"));
+        }
+        else {
+            Serial.print("slot ");
+            Serial.print(slot);
+            Serial.println(" deleted");
         }
     }
 
