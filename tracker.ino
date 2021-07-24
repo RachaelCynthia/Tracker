@@ -42,7 +42,7 @@ char smsBuffer[64];
 char *bufPtr = fonaNotificationBuffer; //handy buffer pointer
 char callerIDbuffer[32];               //we'll store the SMS sender number in here
 
-String url = "https://aepb-web-api.azurewebsites.net/api/v1/trucks/%s/locations"; // replace %s with device ID
+String url = "https://aepb-web-api.azurewebsites.net/api/v1/trucks/<url>/locations"; // replace %s with device ID
 // const char glo_apn[] = "APN";                                                           // replace %s with device ID
 // char glo_password[] = "Flat";
 // char glo_username[] = "Flat";
@@ -122,10 +122,13 @@ void setup()
   fona.enableGPRS(true);
   fona.setHTTPSRedirect(true);
 
-   char ID[16] = "ABCDEFGHIKLM";
-  if (fona.getIMEI(ID)) {
-    url.replace("%s", String(ID));
+   char ID[16] = {0};
+  if (fona.getIMEI(ID) > (uint8_t)0) {
+    url.replace("<url>", String(ID));
     Serial.print("Complete URL: "); Serial.println(url);
+  }
+  else {
+    Serial.println("Did not get SIM IMEI");
   }
 
   //fonaSerial->print("AT+CNMI=2,1\r\n");  //set up the FONA to send a +CMTI notification when an SMS is received
@@ -137,13 +140,12 @@ void loop()
 
   char *bufPtr = fonaNotificationBuffer; //handy buffer pointer
 
-  if (fona.available()) //any data available from the FONA?
-  {
-    slot = 0; //this will be the slot number of the SMS
+  if (fona.available()) {
+    
+    slot = 0;
     charCount = 0;
 
-    do
-    { //Read the notification into fonaInBuffer
+    do { 
       *bufPtr = fona.read();
       Serial.write(*bufPtr);
       delay(1);
@@ -151,58 +153,50 @@ void loop()
 
     *bufPtr = 0;
 
-    //  If it's an SMS message, we'll get the slot number in 'slot'
-    if (1 == sscanf(fonaNotificationBuffer, "+CMTI: " FONA_PREF_SMS_STORAGE ",%d", &slot))
-    {
+    if (1 == sscanf(fonaNotificationBuffer, "+CMTI: " FONA_PREF_SMS_STORAGE ",%d", &slot)) {
       Serial.print("slot: ");
       Serial.println(slot);
 
-      if (!fona.getSMSSender(slot, callerIDbuffer, 31))
-        Serial.println("SMS not in slot!");
+      if (!fona.getSMSSender(slot, callerIDbuffer, 31)) Serial.println("SMS not in slot!");
 
       Serial.print(F("SMS from: "));
       Serial.println(callerIDbuffer);
+      else {
 
-      if (fona.readSMS(slot, smsBuffer, 64, &smslen))
-      {
+        if (fona.readSMS(slot, smsBuffer, 64, &smslen)) {
 
-        Serial.println(smsBuffer);
+          Serial.println(smsBuffer);
 
-        /* Remote commands are executed here
-         * See definitions above.
-        */
-        if (strstr(smsBuffer, mystatus) == 0)
-        {
-          if (myLocation())
-          {
-            message = googlemap + String(latitude, 6) + "," + String(longitude, 6);
-            message = stat + message + "\nSpeed:" + (String)speed_kph + "KPH";
-            if (!fona.sendSMS(callerIDbuffer, message.c_str()))
-              Serial.println(F("Failed to send respons"));
+          /* Remote commands are executed here
+          * See definitions above.
+          */
+          if (strstr(smsBuffer, mystatus) == 0) {
+            if (myLocation()) {
+              message = googlemap + String(latitude, 6) + "," + String(longitude, 6);
+              message = stat + message + "\nSpeed:" + (String)speed_kph + "KPH";
+              if (!fona.sendSMS(callerIDbuffer, message.c_str()))
+                Serial.println(F("Failed to send mystatus response"));
+            }
+            else {
+              Serial.println(F("Response success"));
+            }
           }
-          else
-          {
-            Serial.println(F("Response success"));
+          else if (strstr(smsBuffer, kill) == 0) { // relay handler
+            stat = "RAA: killed\nLoc:";
+            digitalWrite(relay, HIGH);
+            Serial.println("vTrack stoped!");
+            if (!fona.sendSMS(callerIDbuffer, "RAA:killed"))
+            {
+              Serial.println(F("Realay resp: Failed"));
+            }
           }
-        }
-        else if (strstr(smsBuffer, kill) == 0)
-        { // relay handler
-          stat = "RAA: killed\nLoc:";
-          digitalWrite(relay, HIGH);
-          Serial.println("vTrack stoped!");
-          if (!fona.sendSMS(callerIDbuffer, "RAA:killed"))
-          {
-            Serial.println(F("Realay resp: Failed"));
-          }
-        }
-        else if (strstr(smsBuffer, allow) == 0)
-        {
-          digitalWrite(relay, LOW);
-          //control = false;
-          stat = "RAA: active\nLoc:";
-          if (!fona.sendSMS(callerIDbuffer, "RAA:Active"))
-          {
-            Serial.print(F("Failed"));
+          else if (strstr(smsBuffer, allow) == 0) {
+            digitalWrite(relay, LOW);
+            //control = false;
+            stat = "RAA: active\nLoc:";
+            if (!fona.sendSMS(callerIDbuffer, "RAA:Active")) {
+              Serial.print(F("Failed"));
+            }
           }
         }
       }
