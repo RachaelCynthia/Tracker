@@ -159,10 +159,10 @@ void loop()
 
       if (!fona.getSMSSender(slot, callerIDbuffer, 31)) Serial.println("SMS not in slot!");
 
-      Serial.print(F("SMS from: "));
-      Serial.println(callerIDbuffer);
-      else {
-
+      else { 
+        
+        Serial.print(F("SMS from: "));
+        Serial.println(callerIDbuffer);
         if (fona.readSMS(slot, smsBuffer, 64, &smslen)) {
 
           Serial.println(smsBuffer);
@@ -174,8 +174,7 @@ void loop()
             if (myLocation()) {
               message = googlemap + String(latitude, 6) + "," + String(longitude, 6);
               message = stat + message + "\nSpeed:" + (String)speed_kph + "KPH";
-              if (!fona.sendSMS(callerIDbuffer, message.c_str()))
-                Serial.println(F("Failed to send mystatus response"));
+              if (!fona.sendSMS(callerIDbuffer, message.c_str())) Serial.println(F("Failed to send mystatus response"));
             }
             else {
               Serial.println(F("Response success"));
@@ -185,8 +184,7 @@ void loop()
             stat = "RAA: killed\nLoc:";
             digitalWrite(relay, HIGH);
             Serial.println("vTrack stoped!");
-            if (!fona.sendSMS(callerIDbuffer, "RAA:killed"))
-            {
+            if (!fona.sendSMS(callerIDbuffer, "RAA:killed")) {
               Serial.println(F("Realay resp: Failed"));
             }
           }
@@ -203,8 +201,7 @@ void loop()
     }
   }
 
-  if (millis() - last_upload_time > upload_timeout)
-  {
+  if (millis() - last_upload_time > upload_timeout) {
     last_upload_time = millis();
     myLocation();
     send_to_prunedge_server();
