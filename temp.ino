@@ -65,8 +65,11 @@ boolean myLocation()
     while (millis() - previous < fixtime)
     {
         gps_success = fona.getGPS(&latitude, &longitude, &speed_kph, &heading, &altitude);
-        if (gps_success)
+        if (gps_success) {
+            data.replace("<lat>", String(latitude, 6));
+            data.replace("<lon>", String(longitude, 6));
             return true;
+        }
     }
     return gps_success;
 }
@@ -100,6 +103,7 @@ void send_sms_to_rachael(void) {
     else {
         Serial.println(F("SMS sent to emergency line"));
     }
+    data = "{\"longitude\":<lat>,\"lattitude\":<lon>}";
 }
 
 void setup()
