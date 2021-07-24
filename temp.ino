@@ -82,7 +82,7 @@ void send_to_prunedge_server(void)
     // data.replace("<lat>", String(latitude, 6));
     // data.replace("<lon>", String(longitude, 6));
     // data.toCharArray(data_c, (unsigned int)strlen(data_c));
-    sprintf(data_c, "{\"longitude\":%s,\"latitude\":%s}", String(longitude, 6).c_str(), String(latitude, 6).c_str());
+    sprintf(data_c, F("{\"longitude\":%s,\"latitude\":%s}"), String(longitude, 6).c_str(), String(latitude, 6).c_str());
 
     if (!fona.HTTP_POST_start(url, F("application/json"), (uint8_t *)data_c, strlen(data_c), &status_code, (uint16_t *)&length))
     {
@@ -92,7 +92,7 @@ void send_to_prunedge_server(void)
     Serial.println(F(" status code"));
     Serial.print(length);
     Serial.println(F(" length"));
-    sprintf(data_c, "%s", "{\"longitude\":%s,\"lattitude\":%s}");
+    sprintf(data_c, "%s", F("{\"longitude\":%s,\"lattitude\":%s}"));
     status_code = 0;
     length = 0;
     fona.HTTP_POST_end();
@@ -146,7 +146,7 @@ void setup()
     char ID[16] = {0};
     if (fona.getIMEI(ID) > (uint8_t)0)
     {
-        sprintf(url, "http://aepb-web-api.azurewebsites.net/api/v1/trucks/%s/locations", ID);
+        sprintf(url, F("http://aepb-web-api.azurewebsites.net/api/v1/trucks/%s/locations"), ID);
         //url.replace("<url>", String(ID));
         Serial.print(F("Complete URL: "));
         Serial.println(url);
