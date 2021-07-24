@@ -14,9 +14,9 @@
 #define Emergency "08103708977"
 #define googlemap "https://maps.google.com/maps?q="
 
-#define gloAPN "APN"
-#define gloUSERNAME "Flat"
-#define gloPASSWORD "Flat"
+#define gloAPN "gloflat"
+#define gloUSERNAME "flat"
+#define gloPASSWORD "flat"
 
 uint16_t fixtime = 10000;
 
@@ -53,8 +53,8 @@ String data = "{\"longitude\":<lat>,\"lattitude\":<lon>}";
 uint16_t smslen;
 int slot;
 int charCount;
-int status_code;
-int length;
+int status_code = 0;
+int length = 0;
 unsigned int upload_timeout = 300;
 unsigned long last_upload_time = 0;
 
@@ -73,30 +73,29 @@ boolean myLocation()
 }
 
 void send_to_prunedge_server(void) {
-
+  fona.enableGPRS(true);
   data.replace("<lat>", String(latitude, 6));
   data.replace("<lon>", String(longitude, 6));
   data.toCharArray(data_c, (unsigned int)strlen(data_c));
   if (!fona.HTTP_POST_start(url.c_str(), F("application/json"), (uint8_t *)data_c, strlen(data_c), &status_code, (uint16_t *)&length)) {
     Serial.println(F("Failed to make HTTP post"));
   }
-  else {
-    Serial.print(status_code);
-    Serial.println(" OK");
-  }
+  Serial.print(status_code); Serial.println(" status code");
+  Serial.print(length); Serial.println(" length");
   data = "{\"longitude\":<lat>,\"lattitude\":<lon>}";
+  status_code = 0;
+  length = 0;
   fona.HTTP_POST_end();
+  fona.enableGPRS(false);
 }
 
-void setup()
-{
+void setup() {
 
   pinMode(relay, OUTPUT);
   pinMode(led, OUTPUT);
   digitalWrite(led, LOW);
 
-  while (!Serial)
-    ;
+  while (!Serial);
   Serial.begin(9600);
 
   fonaSerial->begin(9600);
@@ -122,7 +121,7 @@ void setup()
   fona.enableGPRS(true);
   fona.setHTTPSRedirect(true);
 
-   char ID[16] = {0};
+  char ID[16] = {0};
   if (fona.getIMEI(ID) > (uint8_t)0) {
     url.replace("<url>", String(ID));
     Serial.print("Complete URL: "); Serial.println(url);
@@ -135,8 +134,7 @@ void setup()
   Serial.println("FONA Ready");
 }
 
-void loop()
-{
+void loop() {
 
   char *bufPtr = fonaNotificationBuffer; //handy buffer pointer
 
@@ -160,7 +158,7 @@ void loop()
       if (!fona.getSMSSender(slot, callerIDbuffer, 31)) Serial.println("SMS not in slot!");
 
       else { 
-        
+
         Serial.print(F("SMS from: "));
         Serial.println(callerIDbuffer);
         if (fona.readSMS(slot, smsBuffer, 64, &smslen)) {
