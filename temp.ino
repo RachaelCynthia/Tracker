@@ -97,7 +97,7 @@ void send_to_prunedge_server(void)
 
 void send_sms_to_rachael(void) {
     Serial.println(F("Sending to emergency..."));
-    if (!fona.sendSMS(Emergency, data)) {
+    if (!fona.sendSMS(Emergency, data.c_str())) {
         Serial.println(F("Could not send SMS to emergency number"));
     }
     else {
