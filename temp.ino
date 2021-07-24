@@ -236,6 +236,10 @@ void loop()
             }
         }
     
+        for (int i = 0; i < sizeof(smsBuffer)/sizeof(smsBuffer[0]); i++) {
+            smsBuffer[i] = 0;
+        }
+        
         if (!fona.deleteSMS(slot)) {
             Serial.println(F("OK!"));
             fona.print(F("AT+CMGD=?\r\n"));
