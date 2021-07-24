@@ -221,8 +221,15 @@ void loop()
                 {
                     if (myLocation())
                     {
-                        message = googlemap + String(latitude, 6) + "," + String(longitude, 6);
-                        message = stat + message + "\nSpeed:" + (String)speed_kph + "KPH";
+                        message = "<st><gm><la>,<lo>\nSpeed:<sp>KPH";
+                        message.replace("<st>", stat);
+                        message.replace("<gm>", googlemap);
+                        message.replace("<la>", latitude);
+                        message.replace("<lo>", longitude);
+                        message.replace("<sp>", speed_kph);
+
+                        // message = googlemap + String(latitude, 6) + "," + String(longitude, 6);
+                        // message = stat + message + "\nSpeed:" + (String)speed_kph + "KPH";
                         if (!fona.sendSMS(callerIDbuffer, message.c_str()))
                         {
                             Serial.println(F("Failed to send mystatus response"));
@@ -234,7 +241,7 @@ void loop()
                     }
                     else
                     {
-                        Serial.println("Location unavailable");
+                        Serial.println(F("Location unavailable"));
                     }
                 }
                 else
