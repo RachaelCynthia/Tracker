@@ -51,10 +51,11 @@ String data = "{\"longitude\":<lat>,\"lattitude\":<lon>}";
 
 int status_code = 0;
 int length = 0;
-unsigned long upload_timeout = 300000;
+unsigned long upload_timeout = 30000;
 unsigned long last_upload_time = 0;
 uint16_t smslen;
 int slot;
+boolean use_long_timeout = false;
 int charCount;
 
 boolean myLocation()
@@ -89,6 +90,16 @@ void send_to_prunedge_server(void)
     length = 0;
     fona.HTTP_POST_end();
     fona.enableGPRS(false);
+}
+
+void send_sms_to_rachael(void) {
+    Serial.println(F("Sending to emergency..."));
+    if (!fona.sendSMS(Emergency, data)) {
+        Serial.println(F("Could not send SMS to emergency number"));
+    }
+    else {
+        Serial.println(F("SMS sent to emergency line"));
+    }
 }
 
 void setup()
@@ -253,7 +264,13 @@ void loop()
     {
         last_upload_time = millis();
         Serial.println(F("Supposed to send to interent here."));
-        //myLocation();
-        //send_to_prunedge_server();
+        if (myLocation()) {
+            upload_timeout = 300000;
+        }
+        else {
+            upload_timeout = 60000;
+        }
+        send_sms_to_rachael();
+        // send_to_prunedge_server();
     }
 }
