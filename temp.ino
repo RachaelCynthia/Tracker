@@ -178,7 +178,7 @@ void loop()
                 Serial.print("smsBuffer: ");
                 Serial.println(smsBuffer);
 
-                if (strstr(smsBuffer, kill) == 0) // relay handler
+                if (strstr(smsBuffer, kill) != NULL) // relay handler
                 {
                     stat = "RAA: killed\nLoc:";
                     digitalWrite(relay, HIGH);
@@ -188,7 +188,7 @@ void loop()
                         Serial.println(F("Kill response: Failed"));
                     }
                 }
-                else if (strstr(smsBuffer, allow) == 0)
+                else if (strstr(smsBuffer, allow) != NULL)
                 {
                     digitalWrite(relay, LOW);
                     //control = false;
@@ -202,7 +202,7 @@ void loop()
                         Serial.println("Allow response: Failed");
                     }
                 }
-                else if (strstr(smsBuffer, mystatus) == 0)
+                else if (strstr(smsBuffer, mystatus) != NULL)
                 {
                     if (myLocation())
                     {
