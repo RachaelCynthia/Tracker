@@ -58,16 +58,13 @@ int length = 0;
 unsigned long upload_timeout = 300000;
 unsigned long last_upload_time = 0;
 
-boolean myLocation()
-{
+boolean myLocation() {
   boolean gps_success = false;
   unsigned long previous = millis();
-  while (millis() - previous < fixtime)
-  {
+  while (millis() - previous < fixtime) {
     gps_success = fona.getGPS(&latitude, &longitude, &speed_kph, &heading, &altitude);
     Serial.print(gps_success);
-    if (gps_success)
-      return true;
+    if (gps_success) return true;
   }
   return gps_success;
 }
@@ -114,9 +111,9 @@ void setup() {
    * <username> and <password> is the same for Glo network
    * fona.setGPRSNetworkSettings(glo_apn, <username>, <password?);
   */
-  fona.setGPRSNetworkSettings(F(gloAPN), F(gloUSERNAME), F(gloPASSWORD));
-  fona.enableGPRS(true);
-  fona.setHTTPSRedirect(true);
+  // fona.setGPRSNetworkSettings(F(gloAPN), F(gloUSERNAME), F(gloPASSWORD));
+  // fona.enableGPRS(true);
+  // fona.setHTTPSRedirect(true);
 
   char ID[16] = {0};
   if (fona.getIMEI(ID) > (uint8_t)0) {
@@ -208,7 +205,8 @@ void loop() {
 
   if (millis() - last_upload_time > upload_timeout) {
     last_upload_time = millis();
-    myLocation();
-    send_to_prunedge_server();
+    Serial.println("Supposed to send to interent here.");
+    //myLocation();
+    //send_to_prunedge_server();
   }
 }
