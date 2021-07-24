@@ -20,7 +20,6 @@
 
 uint16_t fixtime = 1000;
 
-String message = "";
 String stat = "RAA:active\nLoc:";
 
 #define relay 8
@@ -221,18 +220,21 @@ void loop()
                 {
                     if (myLocation())
                     {
-                        message = "<st><gm><la>,<lo>\nSpeed:<sp>KPH";
-                        message.replace("<st>", stat);
-                        message.replace("<gm>", googlemap);
-                        message.replace("<la>", latitude);
-                        message.replace("<lo>", longitude);
-                        message.replace("<sp>", speed_kph);
+                        char message[100];
+                        sprintf(message, "%s%s%s,%s\nSpeed:%sKPH", stat.c_str(), (char *)googlemap, String(latitude, 6).c_str(), String(longitude, 6).c_str(), String(speed_kph, 2).c_str());
+                        // String message = "<st><gm><la>,<lo>\nSpeed:<sp>KPH";
+                        // message.replace("<st>", stat);
+                        // message.replace("<gm>", String(googlemap));
+                        // message.replace("<la>", String(latitude, 6));
+                        // message.replace("<lo>", String(longitude, 6));
+                        // message.replace("<sp>", String(speed_kph, 2));
 
-                        // message = googlemap + String(latitude, 6) + "," + String(longitude, 6);
-                        // message = stat + message + "\nSpeed:" + (String)speed_kph + "KPH";
-                        if (!fona.sendSMS(callerIDbuffer, message.c_str()))
+                            // message = googlemap + String(latitude, 6) + "," + String(longitude, 6);
+                            // message = stat + message + "\nSpeed:" + (String)speed_kph + "KPH";
+                            // if (!fona.sendSMS(callerIDbuffer, message.c_str()))
+                        if (!fona.sendSMS(callerIDbuffer, message))
                         {
-                            Serial.println(F("Failed to send mystatus response"));
+                                Serial.println(F("Failed to send mystatus response"));
                         }
                         else
                         {
