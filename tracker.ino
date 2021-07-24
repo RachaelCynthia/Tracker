@@ -47,7 +47,7 @@ Adafruit_FONA fona = Adafruit_FONA(FONA_RST);
 float latitude, longitude, speed_kph, heading, altitude;
 
 char fonaNotificationBuffer[64];          //for notifications from the FONA
-char smsBuffer[64];
+char smsBuffer[250];
 char* bufPtr = fonaNotificationBuffer;    //handy buffer pointer
 
 
@@ -92,13 +92,6 @@ void setup() {
   if (imeiLen > 0) {
     Serial.print("SIM card IMEI: "); Serial.println(imei);
   }
-
-  if (!fona.sendSMS(Emergency, "FONA ready")) {
-    Serial.println("FONA not ready");
-  }
-  else {
-    Serial.println("FONA ready sent.");
-  }
   Serial.println("FONA Ready");
 }
 
@@ -117,11 +110,11 @@ void setup() {
 
 
 void loop() {
+  
   char* bufPtr = fonaNotificationBuffer;    //handy buffer pointer
   uint16_t smslen;
   int slot;
   int charCount;
-  char callerIDbuffer[32];  //we'll store the SMS sender number in here
   
   if (fona.available())      //any data available from the FONA?
   {
@@ -141,6 +134,8 @@ void loop() {
     //  If it's an SMS message, we'll get the slot number in 'slot'
     if (1 == sscanf(fonaNotificationBuffer, "+CMTI: " FONA_PREF_SMS_STORAGE ",%d", &slot)) {
       Serial.print("slot: "); Serial.println(slot);
+
+      char callerIDbuffer[32]; //we'll store the SMS sender number in here
 
       // Retrieve SMS sender address/phone number.
       if (! fona.getSMSSender(slot, callerIDbuffer, 31)) {
