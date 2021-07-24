@@ -53,6 +53,9 @@ int status_code = 0;
 int length = 0;
 unsigned long upload_timeout = 300000;
 unsigned long last_upload_time = 0;
+uint16_t smslen;
+int slot;
+int charCount;
 
 boolean myLocation()
 {
@@ -78,9 +81,9 @@ void send_to_prunedge_server(void)
         Serial.println(F("Failed to make HTTP post"));
     }
     Serial.print(status_code);
-    Serial.println(" status code");
+    Serial.println(F(" status code"));
     Serial.print(length);
-    Serial.println(" length");
+    Serial.println(F(" length"));
     data = "{\"longitude\":<lat>,\"lattitude\":<lon>}";
     status_code = 0;
     length = 0;
@@ -137,127 +140,120 @@ void setup()
 
 void loop()
 {
-    uint16_t smslen;
-    int slot;
-    int charCount;
-    char *bufPtr = fonaNotificationBuffer; //handy buffer pointer
-    char callerIDbuffer[32];               //we'll store the SMS sender number in here
 
-    while (!fona.available())
+    char *bufPtr = fonaNotificationBuffer;      //handy buffer pointer
+
+    if (fona.available())
     {
-        if (millis() - last_upload_time > upload_timeout)
+        slot = 0;
+        charCount = 0;
+
+        do
         {
-            last_upload_time = millis();
-            Serial.println("Supposed to send to interent here.");
-            //myLocation();
-            //send_to_prunedge_server();
-        }
-    }
+            *bufPtr = fona.read();
+            Serial.write(*bufPtr);
+            delay(1);
+        } while ((*bufPtr++ != '\n') && (fona.available()) && (++charCount < (sizeof(fonaNotificationBuffer) - 1)));
 
-    Serial.println("MODEM is talking.");
+        *bufPtr = 0;
 
-    slot = 0;
-    charCount = 0;
-
-    do
-    {
-        *bufPtr = fona.read();
-        Serial.write(*bufPtr);
-        delay(1);
-    } while ((*bufPtr++ != '\n') && (fona.available()) && (++charCount < (sizeof(fonaNotificationBuffer) - 1)));
-
-    *bufPtr = 0;
-
-    if (1 == sscanf(fonaNotificationBuffer, "+CMTI: " FONA_PREF_SMS_STORAGE ",%d", &slot))
-    {
-        Serial.print("slot: ");
-        Serial.println(slot);
-
-        if (!fona.getSMSSender(slot, callerIDbuffer, 31))
+        if (1 == sscanf(fonaNotificationBuffer, "+CMTI: " FONA_PREF_SMS_STORAGE ",%d", &slot))
         {
-            Serial.println("SMS not in slot!");
-        }
-        else
-        {
-            Serial.print(F("SMS from: "));
-            Serial.println(callerIDbuffer);
-        }
+            Serial.print("slot: ");
+            Serial.println(slot);
 
-        if (fona.readSMS(slot, smsBuffer, 250, &smslen))
-        {
-            Serial.print("smsBuffer: "); Serial.println(smsBuffer);
-
-        /* Remote commands are executed here
-         * See definitions above.
-        */
-            if (strstr(smsBuffer, kill) == 0)   // relay handler
+            char callerIDbuffer[32]; //we'll store the SMS sender number in here
+            if (!fona.getSMSSender(slot, callerIDbuffer, 31))
             {
-                stat = "RAA: killed\nLoc:";
-                digitalWrite(relay, HIGH);
-                Serial.println("vTrack stoped!");
-                if (!fona.sendSMS(callerIDbuffer, "RAA:killed"))
-                {
-                    Serial.println(F("Realay resp: Failed"));
-                }
-            }       
-            else if (strstr(smsBuffer, allow) == 0)
-            {
-                digitalWrite(relay, LOW);
-                //control = false;
-                stat = "RAA: active\nLoc:";
-                if (!fona.sendSMS(callerIDbuffer, "RAA:Active"))
-                {
-                    Serial.print(F("Failed"));
-                }
+                Serial.println("SMS not in slot!");
             }
-            else if (strstr(smsBuffer, mystatus) == 0)
+            else
             {
-                if (myLocation())
+                Serial.print(F("SMS from: "));
+                Serial.println(callerIDbuffer);
+            }
+
+            if (fona.readSMS(slot, smsBuffer, 250, &smslen))
+            {
+                Serial.print("smsBuffer: ");
+                Serial.println(smsBuffer);
+
+                if (strstr(smsBuffer, kill) == 0) // relay handler
                 {
-                    message = googlemap + String(latitude, 6) + "," + String(longitude, 6);
-                    message = stat + message + "\nSpeed:" + (String)speed_kph + "KPH";
-                    if (!fona.sendSMS(callerIDbuffer, message.c_str()))
+                    stat = "RAA: killed\nLoc:";
+                    digitalWrite(relay, HIGH);
+                    Serial.println(F("vTrack stoped!"));
+                    if (!fona.sendSMS(callerIDbuffer, "RAA:killed"))
                     {
-                        Serial.println(F("Failed to send mystatus response"));
+                        Serial.println(F("Kill response: Failed"));
+                    }
+                }
+                else if (strstr(smsBuffer, allow) == 0)
+                {
+                    digitalWrite(relay, LOW);
+                    //control = false;
+                    stat = "RAA: active\nLoc:";
+                    if (!fona.sendSMS(callerIDbuffer, "RAA:Active"))
+                    {
+                        Serial.print(F("Failed"));
                     }
                     else
                     {
-                        Serial.println(F("Response success"));
+                        Serial.println("Allow response: Failed");
+                    }
+                }
+                else if (strstr(smsBuffer, mystatus) == 0)
+                {
+                    if (myLocation())
+                    {
+                        message = googlemap + String(latitude, 6) + "," + String(longitude, 6);
+                        message = stat + message + "\nSpeed:" + (String)speed_kph + "KPH";
+                        if (!fona.sendSMS(callerIDbuffer, message.c_str()))
+                        {
+                            Serial.println(F("Failed to send mystatus response"));
+                        }
+                        else
+                        {
+                            Serial.println(F("Response success"));
+                        }
+                    }
+                    else
+                    {
+                        Serial.println("Location unavailable");
                     }
                 }
                 else
                 {
-                    Serial.println("Location unavailable");
+                    if (!fona.sendSMS(callerIDbuffer, "Command not recognised"))
+                        Serial.println("Replying to unknown command: Failed");
                 }
+            }
+
+            Serial.print(F("smsBuffer: ")); Serial.println(smsBuffer);
+            for (int i = 0; i < sizeof(smsBuffer)/sizeof(smsBuffer[0]); i++)
+            {
+                smsBuffer[i] = 0;
+            }
+
+            if (!fona.deleteSMS(slot))
+            {
+                Serial.println(F("Failed to deleted SMS slot"));
+                fona.print(F("AT+CMGD=?\r\n"));
             }
             else
             {
-                if (!fona.sendSMS(callerIDbuffer, "Command not recognised"))
-                    Serial.println("Replying to unknown command: Failed");
+                Serial.print(F("slot "));
+                Serial.print(slot);
+                Serial.println(F(" deleted"));
             }
-        }
-    
-        for (int i = 0; i < strlen(smsBuffer); i++) {
-            smsBuffer[i] = 0;
-        }
-
-        if (!fona.deleteSMS(slot)) {
-            Serial.println(F("OK!"));
-            fona.print(F("AT+CMGD=?\r\n"));
-        }
-        else {
-            Serial.print("slot ");
-            Serial.print(slot);
-            Serial.println(" deleted");
         }
     }
 
-    // else
-    // {
-    //     Serial.println("MODEM said something but not SMS");
-    //     while (fona.available())
-    //     {
-    //         Serial.write(fona.read());
-    //     }
-    // }
+    if (millis() - last_upload_time > upload_timeout)
+    {
+        last_upload_time = millis();
+        Serial.println(F("Supposed to send to interent here."));
+        //myLocation();
+        //send_to_prunedge_server();
+    }
 }
