@@ -99,11 +99,8 @@ void setup() {
   Serial.begin(9600);
 
   fonaSerial->begin(9600);
-  if (!fona.begin(*fonaSerial))
-  {
-    //Serial.println(F("Couldn't find FONA"));
-    while (1)
-      ;
+  if (!fona.begin(*fonaSerial)) {
+    while (1);
   }
 
   Serial.println(F("FONA is OK"));
