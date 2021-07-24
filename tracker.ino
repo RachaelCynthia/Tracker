@@ -55,7 +55,7 @@ int slot;
 int charCount;
 int status_code = 0;
 int length = 0;
-unsigned int upload_timeout = 300;
+unsigned long upload_timeout = 300000;
 unsigned long last_upload_time = 0;
 
 boolean myLocation()
@@ -137,9 +137,11 @@ void loop() {
 
   if (fona.available()) {
     
+    Serial.println("MODEM is talking.");
+
     slot = 0;
     charCount = 0;
-
+    
     do { 
       *bufPtr = fona.read();
       Serial.write(*bufPtr);
@@ -194,6 +196,12 @@ void loop() {
             if (!fona.sendSMS(callerIDbuffer, "Command not recognised")) Serial.println("Replying to unknown command: Failed");
           }
         }
+      }
+    }
+    else {
+      Serial.print("MODEM said something but not SMS");
+      while(fona.available()) {
+        Serial.write(fona.read());
       }
     }
   }
