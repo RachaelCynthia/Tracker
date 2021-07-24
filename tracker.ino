@@ -132,81 +132,81 @@ void loop() {
 
   char *bufPtr = fonaNotificationBuffer; //handy buffer pointer
 
-  if (fona.available()) {
-    
-    Serial.println("MODEM is talking.");
+  while (!fona.available()) {
+    if (millis() - last_upload_time > upload_timeout) {
+      last_upload_time = millis();
+      Serial.println("Supposed to send to interent here.");
+      //myLocation();
+      //send_to_prunedge_server();
+    }
+  }
+  
+  Serial.println("MODEM is talking.");
 
-    slot = 0;
-    charCount = 0;
-    
-    do { 
-      *bufPtr = fona.read();
-      Serial.write(*bufPtr);
-      delay(1);
-    } while ((*bufPtr++ != '\n') && (fona.available()) && (++charCount < (sizeof(fonaNotificationBuffer) - 1)));
+  slot = 0;
+  charCount = 0;
+  
+  do { 
+    *bufPtr = fona.read();
+    Serial.write(*bufPtr);
+    delay(1);
+  } while ((*bufPtr++ != '\n') && (fona.available()) && (++charCount < (sizeof(fonaNotificationBuffer) - 1)));
 
-    *bufPtr = 0;
+  *bufPtr = 0;
 
-    if (1 == sscanf(fonaNotificationBuffer, "+CMTI: " FONA_PREF_SMS_STORAGE ",%d", &slot)) {
-      Serial.print("slot: ");
-      Serial.println(slot);
+  if (1 == sscanf(fonaNotificationBuffer, "+CMTI: " FONA_PREF_SMS_STORAGE ",%d", &slot)) {
+    Serial.print("slot: ");
+    Serial.println(slot);
 
-      if (!fona.getSMSSender(slot, callerIDbuffer, 31)) Serial.println("SMS not in slot!");
+    if (!fona.getSMSSender(slot, callerIDbuffer, 31)) Serial.println("SMS not in slot!");
 
-      else { 
-        Serial.print(F("SMS from: "));
-        Serial.println(callerIDbuffer);
+    else { 
+      Serial.print(F("SMS from: "));
+      Serial.println(callerIDbuffer);
+    }
 
-        if (fona.readSMS(slot, smsBuffer, 64, &smslen)) {
-          Serial.println(smsBuffer);
+    if (fona.readSMS(slot, smsBuffer, 64, &smslen)) {
+      Serial.println(smsBuffer);
 
-          /* Remote commands are executed here
-          * See definitions above.
-          */
-          if (strstr(smsBuffer, mystatus) == 0) {
-            if (myLocation()) {
-              message = googlemap + String(latitude, 6) + "," + String(longitude, 6);
-              message = stat + message + "\nSpeed:" + (String)speed_kph + "KPH";
-              if (!fona.sendSMS(callerIDbuffer, message.c_str())) Serial.println(F("Failed to send mystatus response"));
-            }
-            else {
-              Serial.println(F("Response success"));
-            }
-          }
-          else if (strstr(smsBuffer, kill) == 0) { // relay handler
-            stat = "RAA: killed\nLoc:";
-            digitalWrite(relay, HIGH);
-            Serial.println("vTrack stoped!");
-            if (!fona.sendSMS(callerIDbuffer, "RAA:killed")) {
-              Serial.println(F("Realay resp: Failed"));
-            }
-          }
-          else if (strstr(smsBuffer, allow) == 0) {
-            digitalWrite(relay, LOW);
-            //control = false;
-            stat = "RAA: active\nLoc:";
-            if (!fona.sendSMS(callerIDbuffer, "RAA:Active")) {
-              Serial.print(F("Failed"));
-            }
-          }
-          else {
-            if (!fona.sendSMS(callerIDbuffer, "Command not recognised")) Serial.println("Replying to unknown command: Failed");
-          }
+      /* Remote commands are executed here
+      * See definitions above.
+      */
+      if (strstr(smsBuffer, mystatus) == 0) {
+        if (myLocation()) {
+          message = googlemap + String(latitude, 6) + "," + String(longitude, 6);
+          message = stat + message + "\nSpeed:" + (String)speed_kph + "KPH";
+          if (!fona.sendSMS(callerIDbuffer, message.c_str())) Serial.println(F("Failed to send mystatus response"));
+        }
+        else {
+          Serial.println(F("Response success"));
         }
       }
-    }
-    else {
-      Serial.print("MODEM said something but not SMS");
-      while(fona.available()) {
-        Serial.write(fona.read());
+      else if (strstr(smsBuffer, kill) == 0) { // relay handler
+        stat = "RAA: killed\nLoc:";
+        digitalWrite(relay, HIGH);
+        Serial.println("vTrack stoped!");
+        if (!fona.sendSMS(callerIDbuffer, "RAA:killed")) {
+          Serial.println(F("Realay resp: Failed"));
+        }
+      }
+      else if (strstr(smsBuffer, allow) == 0) {
+        digitalWrite(relay, LOW);
+        //control = false;
+        stat = "RAA: active\nLoc:";
+        if (!fona.sendSMS(callerIDbuffer, "RAA:Active")) {
+          Serial.print(F("Failed"));
+        }
+      }
+      else {
+        if (!fona.sendSMS(callerIDbuffer, "Command not recognised")) Serial.println("Replying to unknown command: Failed");
       }
     }
   }
-
-  if (millis() - last_upload_time > upload_timeout) {
-    last_upload_time = millis();
-    Serial.println("Supposed to send to interent here.");
-    //myLocation();
-    //send_to_prunedge_server();
+  else {
+    Serial.print("MODEM said something but not SMS");
+    while(fona.available()) {
+      Serial.write(fona.read());
+    }
+    Serial.println("Done with junk.");
   }
 }
