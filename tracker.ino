@@ -93,8 +93,12 @@ void setup() {
     Serial.print("SIM card IMEI: "); Serial.println(imei);
   }
 
-  //fonaSerial->print("AT+CNMI=2,1\r\n");  //set up the FONA to send a +CMTI notification when an SMS is received
-
+  if (!fona.sendSMS(Emergency, "FONA ready")) {
+    Serial.println("FONA not ready");
+  }
+  else {
+    Serial.println("FONA ready sent.");
+  }
   Serial.println("FONA Ready");
 }
 

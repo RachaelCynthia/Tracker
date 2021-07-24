@@ -40,7 +40,6 @@
 // char fonaNotificationBuffer[64]; //for notifications from the FONA
 // char smsBuffer[64];
 // char *bufPtr = fonaNotificationBuffer; //handy buffer pointer
-// char callerIDbuffer[32];               //we'll store the SMS sender number in here
 
 // String url = "http://aepb-web-api.azurewebsites.net/api/v1/trucks/<url>/locations"; // replace %s with device ID
 // // const char glo_apn[] = "APN";                                                           // replace %s with device ID
@@ -50,9 +49,6 @@
 // char data_c[50] = {};
 // String data = "{\"longitude\":<lat>,\"lattitude\":<lon>}";
 
-// uint16_t smslen;
-// int slot;
-// int charCount;
 // int status_code = 0;
 // int length = 0;
 // unsigned long upload_timeout = 300000;
@@ -142,8 +138,11 @@
 
 // void loop()
 // {
-
+//     uint16_t smslen;
+//     int slot;
+//     int charCount;
 //     char *bufPtr = fonaNotificationBuffer; //handy buffer pointer
+//     char callerIDbuffer[32];               //we'll store the SMS sender number in here
 
 //     while (!fona.available())
 //     {
