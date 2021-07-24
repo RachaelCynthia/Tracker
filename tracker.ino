@@ -1,105 +1,97 @@
-#include "Adafruit_FONA.h"
+
 #include <Adafruit_FONA.h>
-#include <SoftwareSerial.h>
+
+/*
+ *
+     TEAM IOTRON 
+  Findme Device Code 
+    NaijaHacks 2019 
+ * 
+ */
+#include "Adafruit_FONA.h"
 
 // standard pins for the shield, adjust as necessary
 #define FONA_RX 2
 #define FONA_TX 3
 #define FONA_RST 4
-
 #define mystatus "RAA status"
 #define kill "RAA kill"
 #define allow "RAA fkill"
-
 #define Emergency "08103708977"
 #define googlemap "https://maps.google.com/maps?q="
-
-#define gloAPN "gloflat"
-#define gloUSERNAME "flat"
-#define gloPASSWORD "flat"
-
 uint16_t fixtime = 10000;
-
-String message = "";
+String message="";
 String stat = "RAA:active\nLoc:";
+
+volatile int interrupt_time;
 
 #define relay 8
 #define led 7
 
+// We default to using software serial. If you want to use hardware serial
+// (because softserial isnt supported) comment out the following three lines 
+// and uncomment the HardwareSerial line
+#include <SoftwareSerial.h>
 SoftwareSerial fonaSS = SoftwareSerial(FONA_TX, FONA_RX);
 SoftwareSerial *fonaSerial = &fonaSS;
 
+// Hardware serial is also possible!
+//  HardwareSerial *fonaSerial = &Serial1;
+
 Adafruit_FONA fona = Adafruit_FONA(FONA_RST);
 
-float latitude = 0;
-float longitude = 0;
-float speed_kph = 0;
-float heading = 0;
-float altitude = 0;
+// Have a FONA 3G? use this object type instead
+//Adafruit_FONA_3G fona = Adafruit_FONA_3G(FONA_RST);
+//String TriggerCase = "";
+//unsigned long intervals = 0;
+float latitude, longitude, speed_kph, heading, altitude;
 
-char fonaNotificationBuffer[64]; //for notifications from the FONA
+char fonaNotificationBuffer[64];          //for notifications from the FONA
 char smsBuffer[64];
-char *bufPtr = fonaNotificationBuffer; //handy buffer pointer
-char callerIDbuffer[32];               //we'll store the SMS sender number in here
+char* bufPtr = fonaNotificationBuffer;    //handy buffer pointer
 
-String url = "http://aepb-web-api.azurewebsites.net/api/v1/trucks/<url>/locations"; // replace %s with device ID
-// const char glo_apn[] = "APN";                                                           // replace %s with device ID
-// char glo_password[] = "Flat";
-// char glo_username[] = "Flat";
 
-char data_c[50] = {};
-String data = "{\"longitude\":<lat>,\"lattitude\":<lon>}";
-
-uint16_t smslen;
-int slot;
-int charCount;
-int status_code = 0;
-int length = 0;
-unsigned long upload_timeout = 300000;
-unsigned long last_upload_time = 0;
-
-boolean myLocation() {
-  boolean gps_success = false;
-  unsigned long previous = millis();
-  while (millis() - previous < fixtime) {
+boolean myLocation(){
+   boolean gps_success = false;
+   unsigned long previous = millis();
+   while(millis() - previous < fixtime) {
     gps_success = fona.getGPS(&latitude, &longitude, &speed_kph, &heading, &altitude);
     Serial.print(gps_success);
-    if (gps_success) return true;
-  }
-  return gps_success;
+    if(gps_success) return true;
+   }
+    return false;
 }
 
-void send_to_prunedge_server(void) {
-  fona.enableGPRS(true);
-  data.replace("<lat>", String(latitude, 6));
-  data.replace("<lon>", String(longitude, 6));
-  data.toCharArray(data_c, (unsigned int)strlen(data_c));
-  if (!fona.HTTP_POST_start(url.c_str(), F("application/json"), (uint8_t *)data_c, strlen(data_c), &status_code, (uint16_t *)&length)) {
-    Serial.println(F("Failed to make HTTP post"));
+void blink_interrupt(void) {
+  switch (state) {
+    case 1:
+      digitalWrite(pin, HIGH);
+    case 0:
+      digitalWrite(pin, LOW);
   }
-  Serial.print(status_code); Serial.println(" status code");
-  Serial.print(length); Serial.println(" length");
-  data = "{\"longitude\":<lat>,\"lattitude\":<lon>}";
-  status_code = 0;
-  length = 0;
-  fona.HTTP_POST_end();
-  fona.enableGPRS(false);
-}
+
+//  digitalWrite(pin, HIGH);
+//  delay(interrupt_time);
+//  digitalWrite(pin,LOW);
+//  delay(interrupt_time);
+} 
 
 void setup() {
-
   pinMode(relay, OUTPUT);
   pinMode(led, OUTPUT);
   digitalWrite(led, LOW);
 
-  while (!Serial);
+  while (! Serial);
+  //pinMode(button, INPUT);
   Serial.begin(9600);
+  //Serial.println(F("Adafruit FONA 808 & 3G GPS demo"));
+  //Serial.println(F("Initializing FONA... (May take a few seconds)"));
 
   fonaSerial->begin(9600);
-  if (!fona.begin(*fonaSerial)) {
-    while (1);
+  if (! fona.begin(*fonaSerial)) {
+    //Serial.println(F("Couldn't find FONA"));
+    while(1);
   }
-
   Serial.println(F("FONA is OK"));
   // Try to enable GPRS
   Serial.println(F("Enabling GPS..."));
@@ -107,106 +99,85 @@ void setup() {
   fonaSerial->print("AT+CNMI=2,1\r\n");
   digitalWrite(led, HIGH);
 
-  /*
-   * <username> and <password> is the same for Glo network
-   * fona.setGPRSNetworkSettings(glo_apn, <username>, <password?);
-  */
-  // fona.setGPRSNetworkSettings(F(gloAPN), F(gloUSERNAME), F(gloPASSWORD));
-  // fona.enableGPRS(true);
-  // fona.setHTTPSRedirect(true);
-
-  char ID[16] = {0};
-  if (fona.getIMEI(ID) > (uint8_t)0) {
-    url.replace("<url>", String(ID));
-    Serial.print("Complete URL: "); Serial.println(url);
-  }
-  else {
-    Serial.println("Did not get SIM IMEI");
+  // Print SIM card IMEI number.
+  char imei[16] = {0}; // MUST use a 16 character buffer for IMEI!
+  uint8_t imeiLen = fona.getIMEI(imei);
+  if (imeiLen > 0) {
+    Serial.print("SIM card IMEI: "); Serial.println(imei);
   }
 
   //fonaSerial->print("AT+CNMI=2,1\r\n");  //set up the FONA to send a +CMTI notification when an SMS is received
+
   Serial.println("FONA Ready");
 }
 
+  
+
+
+/*bool debounce(int delayTime){
+  if (digitalRead(button)){
+    delay(delayTime);
+    if (digitalRead(button))
+      return true;
+  }
+  return false;
+}*/
+
+
+
 void loop() {
-
-  char *bufPtr = fonaNotificationBuffer; //handy buffer pointer
-
-  while (!fona.available()) {
-    if (millis() - last_upload_time > upload_timeout) {
-      last_upload_time = millis();
-      Serial.println("Supposed to send to interent here.");
-      //myLocation();
-      //send_to_prunedge_server();
-    }
-  }
+  char* bufPtr = fonaNotificationBuffer;    //handy buffer pointer
+  uint16_t smslen;
+  int slot;
+  int charCount;
+  char callerIDbuffer[32];  //we'll store the SMS sender number in here
   
-  Serial.println("MODEM is talking.");
+  if (fona.available())      //any data available from the FONA?
+  {
+    slot = 0;            //this will be the slot number of the SMS
+    charCount = 0;
+    //Read the notification into fonaInBuffer
+    do  {
+      *bufPtr = fona.read();
+      Serial.write(*bufPtr);
+      delay(1);
+    } while ((*bufPtr++ != '\n') && (fona.available()) && (++charCount < (sizeof(fonaNotificationBuffer)-1)));
+    
+    //Add a terminal NULL to the notification string
+    *bufPtr = 0;
 
-  slot = 0;
-  charCount = 0;
-  
-  do { 
-    *bufPtr = fona.read();
-    Serial.write(*bufPtr);
-    delay(1);
-  } while ((*bufPtr++ != '\n') && (fona.available()) && (++charCount < (sizeof(fonaNotificationBuffer) - 1)));
+    //Scan the notification string for an SMS received notification.
+    //  If it's an SMS message, we'll get the slot number in 'slot'
+    if (1 == sscanf(fonaNotificationBuffer, "+CMTI: " FONA_PREF_SMS_STORAGE ",%d", &slot)) {
+      Serial.print("slot: "); Serial.println(slot);
 
-  *bufPtr = 0;
-
-  if (1 == sscanf(fonaNotificationBuffer, "+CMTI: " FONA_PREF_SMS_STORAGE ",%d", &slot)) {
-    Serial.print("slot: ");
-    Serial.println(slot);
-
-    if (!fona.getSMSSender(slot, callerIDbuffer, 31)) Serial.println("SMS not in slot!");
-
-    else { 
-      Serial.print(F("SMS from: "));
-      Serial.println(callerIDbuffer);
-    }
-
-    if (fona.readSMS(slot, smsBuffer, 64, &smslen)) {
-      Serial.println(smsBuffer);
-
-      /* Remote commands are executed here
-      * See definitions above.
-      */
-      if (strstr(smsBuffer, mystatus) == 0) {
-        if (myLocation()) {
-          message = googlemap + String(latitude, 6) + "," + String(longitude, 6);
-          message = stat + message + "\nSpeed:" + (String)speed_kph + "KPH";
-          if (!fona.sendSMS(callerIDbuffer, message.c_str())) Serial.println(F("Failed to send mystatus response"));
-        }
-        else {
-          Serial.println(F("Response success"));
-        }
+      // Retrieve SMS sender address/phone number.
+      if (! fona.getSMSSender(slot, callerIDbuffer, 31)) {
+        Serial.println("SMS not in slot!");
       }
-      else if (strstr(smsBuffer, kill) == 0) { // relay handler
-        stat = "RAA: killed\nLoc:";
-        digitalWrite(relay, HIGH);
-        Serial.println("vTrack stoped!");
-        if (!fona.sendSMS(callerIDbuffer, "RAA:killed")) {
-          Serial.println(F("Realay resp: Failed"));
+      Serial.print(F("FROM: ")); Serial.println(callerIDbuffer);
+     // Retrieve SMS value.
+      
+      if(fona.readSMS(slot, smsBuffer, 64, &smslen)){
+        Serial.println(smsBuffer);
+
+        if( strstr(smsBuffer, mystatus) == 0 ) {    
+          if(myLocation()) {
+            message = googlemap + String(latitude,6)+","+String(longitude,6);
+            message = stat + message +"\nSpeed:"+ (String)speed_kph + "KPH";
+            if(!fona.sendSMS(callerIDbuffer, message.c_str())) {
+              Serial.println(F("Failed to send response."));
+            }
+            else {
+              // interrupt causes blink twice at 0.5s
+              Serial.println(F("Response success"));
+            }
+          }
+          else{
+            if(!fona.sendSMS(callerIDbuffer, "Oops! no fix")) Serial.println(F("No GPS note: couldn't send"));
+          }
         }
-      }
-      else if (strstr(smsBuffer, allow) == 0) {
-        digitalWrite(relay, LOW);
-        //control = false;
-        stat = "RAA: active\nLoc:";
-        if (!fona.sendSMS(callerIDbuffer, "RAA:Active")) {
-          Serial.print(F("Failed"));
-        }
-      }
-      else {
-        if (!fona.sendSMS(callerIDbuffer, "Command not recognised")) Serial.println("Replying to unknown command: Failed");
       }
     }
-  }
-  else {
-    Serial.print("MODEM said something but not SMS");
-    while(fona.available()) {
-      Serial.write(fona.read());
-    }
-    Serial.println("Done with junk.");
   }
 }
