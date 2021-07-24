@@ -42,7 +42,7 @@ char fonaNotificationBuffer[64]; //for notifications from the FONA
 char smsBuffer[SMSBUFFLEN];
 char *bufPtr = fonaNotificationBuffer; //handy buffer pointer
 
-String url = "http://aepb-web-api.azurewebsites.net/api/v1/trucks/<url>/locations"; // replace %s with device ID
+char url[110] = {0}; // replace %s with device ID
 // const char glo_apn[] = "APN";                                                           // replace %s with device ID
 // char glo_password[] = "Flat";
 // char glo_username[] = "Flat";
@@ -84,7 +84,7 @@ void send_to_prunedge_server(void)
     // data.toCharArray(data_c, (unsigned int)strlen(data_c));
     sprintf(data_c, "{\"longitude\":%s,\"latitude\":%s}", String(longitude, 6).c_str(), String(latitude, 6).c_str());
 
-    if (!fona.HTTP_POST_start(url.c_str(), F("application/json"), (uint8_t *)data_c, strlen(data_c), &status_code, (uint16_t *)&length))
+    if (!fona.HTTP_POST_start(url, F("application/json"), (uint8_t *)data_c, strlen(data_c), &status_code, (uint16_t *)&length))
     {
         Serial.println(F("Failed to make HTTP post"));
     }
@@ -146,7 +146,8 @@ void setup()
     char ID[16] = {0};
     if (fona.getIMEI(ID) > (uint8_t)0)
     {
-        url.replace("<url>", String(ID));
+        sprintf(url, "http://aepb-web-api.azurewebsites.net/api/v1/trucks/%s/locations", ID);
+        //url.replace("<url>", String(ID));
         Serial.print(F("Complete URL: "));
         Serial.println(url);
     }
@@ -288,7 +289,7 @@ void loop()
         else {
             upload_timeout = 60000;
         }
-        send_sms_to_rachael();
-        // send_to_prunedge_server();
+        //send_sms_to_rachael();
+        send_to_prunedge_server();
     }
 }
