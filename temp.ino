@@ -13,13 +13,14 @@
 
 #define Emergency "08103708977"
 #define googlemap "https://maps.google.com/maps?q="
+#define circadian "https://httpbin.org/post"
 
-#define gloAPN "gloflat"
-#define gloUSERNAME "flat"
-#define gloPASSWORD "flat"
+#define gloAPN "gloflat"   // "web.gprs.mtnnigeria.net"
+#define gloUSERNAME "flat" // "web"
+#define gloPASSWORD "flat" // "web"
 
 #define SMSBUFFLEN 160
-
+#define SMSSLOTNUMBER 20 // change this according to the SIM card
 uint16_t fixtime = 1000;
 
 String stat = "RAA:active\nLoc:";
@@ -43,12 +44,7 @@ char smsBuffer[SMSBUFFLEN];
 char *bufPtr = fonaNotificationBuffer; //handy buffer pointer
 
 char url[110] = {0}; // replace %s with device ID
-// const char glo_apn[] = "APN";                                                           // replace %s with device ID
-// char glo_password[] = "Flat";
-// char glo_username[] = "Flat";
-
-char data_c[100] = {};
-//char * data = "{\"longitude\":%s,\"lattitude\":%s}";
+char data_c[100] = {0};
 
 int status_code = 0;
 int length = 0;
@@ -66,7 +62,8 @@ boolean myLocation()
     while (millis() - previous < fixtime)
     {
         gps_success = fona.getGPS(&latitude, &longitude, &speed_kph, &heading, &altitude);
-        if (gps_success) {
+        if (gps_success)
+        {
             sprintf(data_c, "{\"longitude\":%s,\"latitude\":%s}", String(longitude, 6).c_str(), String(latitude, 6).c_str());
             // data.replace("<lat>", String(latitude, 6));
             // data.replace("<lon>", String(longitude, 6));
@@ -82,9 +79,9 @@ void send_to_prunedge_server(void)
     // data.replace("<lat>", String(latitude, 6));
     // data.replace("<lon>", String(longitude, 6));
     // data.toCharArray(data_c, (unsigned int)strlen(data_c));
-    sprintf(data_c, F("{\"longitude\":%s,\"latitude\":%s}"), String(longitude, 6).c_str(), String(latitude, 6).c_str());
+    sprintf(data_c, "{\"longitude\":%s,\"latitude\":%s}", String(longitude, 6).c_str(), String(latitude, 6).c_str());
 
-    if (!fona.HTTP_POST_start(url, F("application/json"), (uint8_t *)data_c, strlen(data_c), &status_code, (uint16_t *)&length))
+    if (!fona.HTTP_POST_start(circadian, F("application/json"), (uint8_t *)data_c, strlen(data_c), &status_code, (uint16_t *)&length))
     {
         Serial.println(F("Failed to make HTTP post"));
     }
@@ -99,12 +96,15 @@ void send_to_prunedge_server(void)
     fona.enableGPRS(false);
 }
 
-void send_sms_to_rachael(void) {
+void send_sms_to_rachael(void)
+{
     Serial.println(F("Sending to emergency..."));
-    if (!fona.sendSMS(Emergency, data_c)) {
+    if (!fona.sendSMS(Emergency, data_c))
+    {
         Serial.println(F("Could not send SMS to emergency number"));
     }
-    else {
+    else
+    {
         Serial.println(F("SMS sent to emergency line"));
     }
     sprintf(data_c, "%s", "{\"longitude\":%s,\"lattitude\":%s}");
@@ -146,7 +146,7 @@ void setup()
     char ID[16] = {0};
     if (fona.getIMEI(ID) > (uint8_t)0)
     {
-        sprintf(url, F("http://aepb-web-api.azurewebsites.net/api/v1/trucks/%s/locations"), ID);
+        sprintf(url, "http://aepb-web-api.azurewebsites.net/api/v1/trucks/%s/locations", ID);
         //url.replace("<url>", String(ID));
         Serial.print(F("Complete URL: "));
         Serial.println(url);
@@ -161,7 +161,7 @@ void setup()
 void loop()
 {
 
-    char *bufPtr = fonaNotificationBuffer;      //handy buffer pointer
+    char *bufPtr = fonaNotificationBuffer; //handy buffer pointer
 
     if (fona.available())
     {
@@ -187,16 +187,9 @@ void loop()
             {
                 Serial.println(F("SMS not in slot!"));
             }
-            else
-            {
-                Serial.print(F("SMS from: "));
-                Serial.println(callerIDbuffer);
-            }
 
             if (fona.readSMS(slot, smsBuffer, SMSBUFFLEN, &smslen))
             {
-                Serial.print(F("smsBuffer: "));
-                Serial.println(smsBuffer);
 
                 if (strstr(smsBuffer, kill) != NULL) // relay handler
                 {
@@ -228,19 +221,9 @@ void loop()
                     {
                         char message[100];
                         sprintf(message, "%s%s%s,%s\nSpeed:%sKPH", stat.c_str(), (char *)googlemap, String(latitude, 6).c_str(), String(longitude, 6).c_str(), String(speed_kph, 2).c_str());
-                        // String message = "<st><gm><la>,<lo>\nSpeed:<sp>KPH";
-                        // message.replace("<st>", stat);
-                        // message.replace("<gm>", String(googlemap));
-                        // message.replace("<la>", String(latitude, 6));
-                        // message.replace("<lo>", String(longitude, 6));
-                        // message.replace("<sp>", String(speed_kph, 2));
-
-                            // message = googlemap + String(latitude, 6) + "," + String(longitude, 6);
-                            // message = stat + message + "\nSpeed:" + (String)speed_kph + "KPH";
-                            // if (!fona.sendSMS(callerIDbuffer, message.c_str()))
                         if (!fona.sendSMS(callerIDbuffer, message))
                         {
-                                Serial.println(F("Failed to send mystatus response"));
+                            Serial.println(F("Failed to send mystatus response"));
                         }
                         else
                         {
@@ -259,22 +242,33 @@ void loop()
                 }
             }
 
-            Serial.print(F("smsBuffer: ")); Serial.println(smsBuffer);
-            for (int i = 0; i < sizeof(smsBuffer)/sizeof(smsBuffer[0]); i++)
+            Serial.print(F("smsBuffer: "));
+            Serial.println(smsBuffer);
+            for (int i = 0; i < sizeof(smsBuffer) / sizeof(smsBuffer[0]); i++)
             {
                 smsBuffer[i] = 0;
             }
-
-            if (!fona.deleteSMS(slot))
+            for (int i = 0; i < SMSSLOTNUMBER; i++)
             {
-                Serial.println(F("Failed to deleted SMS slot"));
-                fona.print(F("AT+CMGD=?\r\n"));
-            }
-            else
-            {
-                Serial.print(F("slot "));
-                Serial.print(slot);
-                Serial.println(F(" deleted"));
+                if (fona.readSMS(i, smsBuffer, SMSBUFFLEN, &smslen))
+                {
+                    Serial.print(F("Slot "));
+                    Serial.print(i);
+                    Serial.print(F(": "));
+                    Serial.println(smsBuffer);
+                    if (!fona.deleteSMS(slot))
+                    {
+                        Serial.print(F("Failed to deleted SMS slot "));
+                        Serial.println(i);
+                        fona.print(F("AT+CMGD=?\r\n"));
+                    }
+                    else
+                    {
+                        Serial.print(F("slot "));
+                        Serial.print(i);
+                        Serial.println(F(" deleted"));
+                    }
+                }
             }
         }
     }
@@ -283,10 +277,12 @@ void loop()
     {
         last_upload_time = millis();
         Serial.println(F("Supposed to send to interent here."));
-        if (myLocation()) {
+        if (myLocation())
+        {
             upload_timeout = 300000;
         }
-        else {
+        else
+        {
             upload_timeout = 60000;
         }
         //send_sms_to_rachael();
