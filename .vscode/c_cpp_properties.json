@@ -20,7 +20,7 @@
         },
         {
             "name": "Arduino",
-            "compilerPath": "C:\\Users\\EYITOPE ADELOWO\\Downloads\\Dova\\arduino-1.8.9-windows\\arduino-1.8.9\\hardware\\tools\\avr\\bin\\avr-g++",
+            "compilerPath": "~/Downloads/arduino-1.8.15-linux64/arduino-1.8.15",
             "compilerArgs": [
                 "-w",
                 "-std=gnu++11",
@@ -33,13 +33,7 @@
             ],
             "intelliSenseMode": "gcc-x64",
             "includePath": [
-                "C:\\Users\\EYITOPE ADELOWO\\Downloads\\Dova\\arduino-1.8.9-windows\\arduino-1.8.9\\hardware\\arduino\\avr\\cores\\arduino",
-                "C:\\Users\\EYITOPE ADELOWO\\Downloads\\Dova\\arduino-1.8.9-windows\\arduino-1.8.9\\hardware\\arduino\\avr\\variants\\standard",
-                "C:\\Users\\EYITOPE ADELOWO\\Documents\\Arduino\\libraries\\Adafruit_FONA_Library",
-                "C:\\Users\\EYITOPE ADELOWO\\Downloads\\Dova\\arduino-1.8.9-windows\\arduino-1.8.9\\hardware\\arduino\\avr\\libraries\\SoftwareSerial\\src",
-                "c:\\users\\eyitope adelowo\\downloads\\dova\\arduino-1.8.9-windows\\arduino-1.8.9\\hardware\\tools\\avr\\lib\\gcc\\avr\\5.4.0\\include",
-                "c:\\users\\eyitope adelowo\\downloads\\dova\\arduino-1.8.9-windows\\arduino-1.8.9\\hardware\\tools\\avr\\lib\\gcc\\avr\\5.4.0\\include-fixed",
-                "c:\\users\\eyitope adelowo\\downloads\\dova\\arduino-1.8.9-windows\\arduino-1.8.9\\hardware\\tools\\avr\\avr\\include"
+                "~/Arduino/libraries/**"
             ],
             "forcedInclude": [
                 "C:\\Users\\EYITOPE ADELOWO\\Downloads\\Dova\\arduino-1.8.9-windows\\arduino-1.8.9\\hardware\\arduino\\avr\\cores\\arduino\\Arduino.h"
