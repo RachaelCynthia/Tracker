@@ -52,7 +52,16 @@
 #define WEB_DATA_MAX_SIZE 160
 #define FONA_NOTIFICATION_BUFFER_SIZE 64
 
+#if (USE_SERIAL > 0)
+    #define SHOW(X) Serial.print(F(X))
+    #define SHOW_LINE(X) Serial.println(F(X))
+#else
+    #define SHOW(X) (void)0
+    #define SHOW_LINE(X) (void)0
+#endif
+
 #define FLASH(X) F(X)
+
 
 float latitude = 0;
 float longitude = 0;
@@ -79,7 +88,7 @@ char *bufPtr = fonaNotificationBuffer;
 
 boolean fetch_location(void);
 void sms_handler(char * sms_buffer, char * sender_number);
-void clear_buffer(char * buffer);
+void clear_buffer(char * buffer_);
 void clear_sms_slots(void);
 void send_to_server(char *data);
 
@@ -99,13 +108,7 @@ void setup() {
     fona.enableGPS(true);
     fonaSerial->print(F(ENABLE_SMS_NOTIFICATIONS));
 
-#if (USE_SERIAL > 0)
-    #define SHOW(X) Serial.print(F(X))
-    #define SHOW_LINE(X) Serial.println(F(X))
-#else
-    #define SHOW(X) (void)0
-    #define SHOW_LINE(X) (void)0
-#endif
+
 
     fona.setGPRSNetworkSettings(F(APN), F(USERNAME), F(PASSWORD));
     fona.enableGPRS(true);
@@ -199,8 +202,8 @@ void sms_handler(char * sms_buffer, char * sender_number) {
     }
 }
 
-void clear_buffer(char * buffer, int buffer_l) {
-    for (int i = 0; i < buffer_l; i++) buffer[i] = 0;
+void clear_buffer(char * buffer_, int buffer_l) {
+    for (int i = 0; i < buffer_l; i++) buffer_[i] = 0;
 }
 
 void send_to_server(char * data) {
