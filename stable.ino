@@ -49,7 +49,7 @@
 */
 #define GOOGLE_MAP "https://maps.google.com/maps?q="
 #define URL "httpbin.org/anything"
-#define WEB_DATA_MAX_SIZE 160
+#define WEB_DATA_MAX_SIZE 80    // actually 78 "lattitude" + "longitude" + length of numbers as strings + JSON format overhead + IMEI as string + others
 #define FONA_NOTIFICATION_BUFFER_SIZE 64
 
 #if (USE_SERIAL > 0)
@@ -77,7 +77,7 @@ const unsigned int server_upload_interval = 60000;  // in milliseconds
 unsigned long last_upload_time = 0;
 
 char fonaNotificationBuffer[FONA_NOTIFICATION_BUFFER_SIZE]; 
-char receivedSMS[SMS_BUFFER_LEN];
+char receivedSMS[SMS_BUFFER_LEN + WEB_DATA_MAX_SIZE];
 //char outgoingData[WEB_DATA_MAX_SIZE];
  
 SoftwareSerial fonaSS = SoftwareSerial(FONA_TX, FONA_RX);
@@ -107,8 +107,6 @@ void setup() {
     while(!fona.begin(*fonaSerial));
     fona.enableGPS(true);
     fonaSerial->print(F(ENABLE_SMS_NOTIFICATIONS));
-
-
 
     fona.setGPRSNetworkSettings(F(APN), F(USERNAME), F(PASSWORD));
     fona.enableGPRS(true);
@@ -211,7 +209,9 @@ void send_to_server(char * data) {
     uint16_t msgLen = 0;
     //const char * url = URL;
     fona.enableGPRS(true);
-    sprintf(data, "{\"longitude\":%s, \"lattitude\":%s}", String(longitude, 6).c_str(), String(latitude,6).c_str());
+    char imei[16] = "ABCDEFGHIJKMN0";
+    fona.getIMEI(imei);
+    sprintf(data, "{\"longitude\":%s, \"lattitude\":%s, \"id\":%s}", String(longitude, 6).c_str(), String(latitude,6).c_str(), imei);
     fona.HTTP_POST_start(URL, F("application/json"), (uint8_t *)data, strlen(data), &status_code, (uint16_t *)&msgLen);
     SHOW("Status code: "); Serial.println(status_code);
     SHOW("Data length: "); Serial.println(msgLen);
